@@ -1,0 +1,174 @@
+@page "/"
+@implements IDisposable
+@using NHLGameSchedule.Models
+@using NHLGameSchedule.Services
+@inject INhlScheduleService ScheduleService
+@inject Microsoft.Extensions.Options.IOptions<NhlScheduleOptions> ScheduleOptions
+@inject TeamSelectionState TeamSelection
+
+<PageTitle>NHL Home Game Calendar</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3 gap-3">
+    <div>
+        <h1 class="mb-1">NHL Home Game Calendar</h1>
+        <p class="mb-0">Select teams from the menu to show their home games.</p>
+    </div>
+    <div class="calendar-controls">
+        <button class="btn btn-outline-primary" @onclick="ShowPreviousMonth" disabled="@IsLoading"
+                aria-label="View previous month">
+            Previous
+        </button>
+        <h2 class="h4 mb-0">@CalendarMonth.ToString("MMMM yyyy")</h2>
+        <button class="btn btn-outline-primary" @onclick="ShowNextMonth" disabled="@IsLoading"
+                aria-label="View next month">
+            Next
+        </button>
+    </div>
+</div>
+
+@if (IsLoading)
+{
+    <p><em>Loading schedule...</em></p>
+}
+else if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @ErrorMessage
+    </div>
+}
+else
+{
+    @if (!VisibleGames.Any())
+    {
+        <p>No home games found for this month.</p>
+    }
+
+    <div class="calendar" aria-label="@CalendarMonth.ToString("MMMM yyyy")">
+        @foreach (var dayName in DayNames)
+        {
+            <div class="calendar-header">@dayName</div>
+        }
+
+        @foreach (var day in CalendarDays)
+        {
+            <div class="calendar-day @(day.Month != CalendarMonth.Month ? "calendar-day-muted" : null)">
+                <div class="calendar-date">@day.Day</div>
+                @foreach (var game in VisibleGames.Where(g => g.GameDate.ToLocalTime().Date == day))
+                {
+                    <a class="calendar-game" style="border-color: @GetTeamColor(game.HomeTeam)" href="@game.GameCenterLink" target="_blank" rel="noopener noreferrer">
+                        <div class="calendar-game-summary">
+                            <span class="calendar-game-time">@game.GameDate.ToLocalTime().ToString("h:mm tt")</span>
+                        <div class="calendar-game-teams">
+                            <img src="@GetTeamLogo(game.AwayTeam)" alt="@GetTeamName(game.AwayTeam)" />
+                            <span>at</span>
+                            <img src="@GetTeamLogo(game.HomeTeam)" alt="@GetTeamName(game.HomeTeam)" />
+                        </div>
+                        </div>
+                        @if (game.IsFinal && game.HomeScore.HasValue && game.AwayScore.HasValue)
+                        {
+                            <div class="fw-bold">Final: @game.AwayScore - @game.HomeScore</div>
+                        }
+                    </a>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private static readonly string[] DayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    private IReadOnlyList<NhlTeamOptions> ConfiguredTeams = [];
+    private DateTime CalendarMonth = new(DateTime.Now.Year, DateTime.Now.Month, 1);
+    private IReadOnlyList<NhlGame> Games = [];
+    private bool IsLoading = true;
+    private string? ErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfiguredTeams = ScheduleOptions.Value.Teams;
+        TeamSelection.Changed += OnTeamSelectionChanged;
+        await LoadGamesAsync();
+    }
+
+    private async Task LoadGamesAsync()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+
+        try
+        {
+            var from = CalendarMonth.ToUniversalTime();
+            var to = CalendarMonth.AddMonths(1).AddTicks(-1).ToUniversalTime();
+
+            Games = await ScheduleService.GetHomeGamesAsync(
+                ConfiguredTeams.Select(team => team.Abbreviation),
+                from,
+                to);
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Failed to load the NHL schedule. Please try again later.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task ShowPreviousMonth()
+    {
+        CalendarMonth = CalendarMonth.AddMonths(-1);
+        await LoadGamesAsync();
+    }
+
+    private async Task ShowNextMonth()
+    {
+        CalendarMonth = CalendarMonth.AddMonths(1);
+        await LoadGamesAsync();
+    }
+
+    private void OnTeamSelectionChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private IEnumerable<NhlGame> VisibleGames =>
+        Games.Where(game => TeamSelection.IsSelected(game.HomeTeam));
+
+    private string GetTeamLogo(string abbreviation) =>
+        $"https://assets.nhle.com/logos/nhl/svg/{abbreviation.ToUpperInvariant()}_light.svg";
+
+    private string GetTeamName(string abbreviation) =>
+        ConfiguredTeams.FirstOrDefault(team => team.Abbreviation.Equals(abbreviation, StringComparison.OrdinalIgnoreCase))?.Name ?? abbreviation;
+
+    private static string GetTeamColor(string abbreviation) =>
+        abbreviation.ToUpperInvariant() switch
+        {
+            "NYI" => "#00539B",
+            "ANA" => "#F47A38",
+            "UTA" => "#6cace4",
+            "SEA" => "#92d0d0",
+            _ => "#6c757d"
+        };
+
+    public void Dispose()
+    {
+        TeamSelection.Changed -= OnTeamSelectionChanged;
+    }
+
+    private IEnumerable<DateTime> CalendarDays
+        {
+            get
+            {
+                var firstDay = CalendarMonth.AddDays(-(int)CalendarMonth.DayOfWeek);
+                var lastDay = CalendarMonth.AddMonths(1).AddDays(-1);
+                var totalDays = (int)CalendarMonth.DayOfWeek + lastDay.Day
+                    + 6 - (int)lastDay.DayOfWeek;
+
+                for (var i = 0; i < totalDays; i++)
+                {
+                    yield return firstDay.AddDays(i);
+            }
+        }
+    }
+}

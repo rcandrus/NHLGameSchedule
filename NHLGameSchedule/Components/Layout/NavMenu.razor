@@ -1,0 +1,37 @@
+@using NHLGameSchedule.Models
+@using NHLGameSchedule.Services
+@inject Microsoft.Extensions.Options.IOptions<NhlScheduleOptions> ScheduleOptions
+@inject TeamSelectionState TeamSelection
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Teams</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="team-menu-heading px-3">Show home games for:</div>
+        @foreach (var team in ScheduleOptions.Value.Teams)
+        {
+            <button class="team-toggle @(TeamSelection.IsSelected(team.Abbreviation) ? "selected" : null)"
+                    @onclick="() => TeamSelection.Toggle(team.Abbreviation)"
+                    aria-pressed="@TeamSelection.IsSelected(team.Abbreviation)">
+                <img src="@GetTeamLogo(team.Abbreviation)" alt="" class="team-logo" />
+                <span>@team.Name</span>
+            </button>
+        }
+    </nav>
+</div>
+
+@code {
+    private static string GetTeamLogo(string abbreviation) =>
+        $"https://assets.nhle.com/logos/nhl/svg/{abbreviation.ToUpperInvariant()}_light.svg";
+
+    protected override void OnInitialized()
+    {
+        TeamSelection.Initialize(ScheduleOptions.Value.Teams);
+    }
+}
