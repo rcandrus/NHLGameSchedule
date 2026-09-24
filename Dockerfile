@@ -10,6 +10,7 @@ RUN dotnet publish "NHLGameSchedule.csproj" \
     --configuration Release \
     --output /app/publish \
     --no-restore
+RUN find /app/publish/wwwroot -maxdepth 2 -type f -name 'blazor.web.js' -print
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
