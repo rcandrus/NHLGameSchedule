@@ -30,6 +30,15 @@ ghcr.io/rcand/nhlgameschedule:latest
 
 The image is published automatically by GitHub Actions after a push to `main`. The package may need to be made public in the repository's **Packages** settings before an unauthenticated Portainer host can pull it.
 
+Each workflow run also publishes immutable image tags:
+
+```text
+ghcr.io/rcandrus/nhlgameschedule:build-42
+ghcr.io/rcandrus/nhlgameschedule:sha-<commit-sha>
+```
+
+Use the GitHub Actions run number or commit SHA to deploy a specific build in Portainer instead of `latest`. The `latest` tag can move when a newer commit is pushed; build and SHA tags do not.
+
 ## Configure teams
 
 Edit `NHLGameSchedule/appsettings.json`:
