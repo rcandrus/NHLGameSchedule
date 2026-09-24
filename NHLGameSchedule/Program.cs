@@ -41,13 +41,13 @@ app.UseStaticFiles();
 
 app.MapGet("/_framework/blazor.web.js", (IWebHostEnvironment environment) =>
 {
-    var filePath = Path.Combine(
-        environment.ContentRootPath,
-        "wwwroot",
-        "_framework",
-        "blazor.web.js");
+    var webRootPath = environment.WebRootPath
+        ?? Path.Combine(environment.ContentRootPath, "wwwroot");
+    var filePath = Path.Combine(webRootPath, "_framework", "blazor.web.js");
 
-    return Results.File(filePath, "text/javascript");
+    return File.Exists(filePath)
+        ? Results.File(filePath, "text/javascript")
+        : Results.NotFound();
 });
 
 app.MapStaticAssets();
