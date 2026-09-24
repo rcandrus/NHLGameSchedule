@@ -39,17 +39,6 @@ app.UseAntiforgery();
 app.UseWebSockets();
 app.UseStaticFiles();
 
-app.MapGet("/_framework/blazor.web.js", (IWebHostEnvironment environment) =>
-{
-    var webRootPath = environment.WebRootPath
-        ?? Path.Combine(environment.ContentRootPath, "wwwroot");
-    var filePath = Path.Combine(webRootPath, "_framework", "blazor.web.js");
-
-    return File.Exists(filePath)
-        ? Results.File(filePath, "text/javascript")
-        : Results.NotFound();
-});
-
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
