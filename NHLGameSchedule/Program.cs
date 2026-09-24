@@ -30,9 +30,13 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+if (builder.Configuration.GetValue<bool>("EnableHttpsRedirection"))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAntiforgery();
+app.UseWebSockets();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
