@@ -37,6 +37,7 @@ if (builder.Configuration.GetValue<bool>("EnableHttpsRedirection"))
 
 app.UseAntiforgery();
 app.UseWebSockets();
+app.UseStaticFiles();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
