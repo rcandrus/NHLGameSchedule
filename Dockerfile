@@ -10,7 +10,11 @@ RUN dotnet publish "NHLGameSchedule.csproj" \
     --configuration Release \
     --output /app/publish \
     --no-restore
-RUN find /app/publish/wwwroot -maxdepth 2 -type f -name 'blazor.web.js' -print
+RUN framework_asset=$(find /usr/share/dotnet -type f -name 'blazor.web.js' | head -n 1) \
+    && test -n "$framework_asset" \
+    && mkdir -p /app/publish/wwwroot/_framework \
+    && cp "$framework_asset" /app/publish/wwwroot/_framework/blazor.web.js \
+    && test -f /app/publish/wwwroot/_framework/blazor.web.js
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
