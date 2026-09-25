@@ -10,8 +10,7 @@ RUN dotnet publish "NHLGameSchedule.csproj" \
     --configuration Release \
     --output /app/publish \
     --no-restore
-RUN framework_asset=$(find /root/.nuget/packages/microsoft.aspnetcore.app.internal.assets \
-        -path '*/_framework/blazor.web.js' | sort -V | tail -n 1) \
+RUN framework_asset=$(find /root/.nuget/packages -type f -path '*/_framework/blazor.web.js' | head -n 1) \
     && test -n "$framework_asset" \
     && mkdir -p /app/publish/wwwroot/_framework \
     && cp "$framework_asset" /app/publish/wwwroot/_framework/blazor.web.js \
