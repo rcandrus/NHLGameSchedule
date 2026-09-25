@@ -5,6 +5,7 @@
 @inject INhlScheduleService ScheduleService
 @inject Microsoft.Extensions.Options.IOptions<NhlScheduleOptions> ScheduleOptions
 @inject TeamSelectionState TeamSelection
+@inject IJSRuntime JS
 
 <PageTitle>NHL Home Game Calendar</PageTitle>
 
@@ -14,14 +15,14 @@
         <p class="mb-0">Select teams from the menu to show their home games.</p>
     </div>
     <div class="calendar-controls">
-        <button class="btn btn-outline-primary" @onclick="ShowPreviousMonth" disabled="@IsLoading"
-                aria-label="View previous month">
-            Previous
+        <button class="btn btn-outline-primary calendar-nav-button" @onclick="ShowPreviousMonth" disabled="@IsLoading"
+                aria-label="View previous month" title="Previous month">
+            <span aria-hidden="true">&larr;</span>
         </button>
         <h2 class="h4 mb-0">@CalendarMonth.ToString("MMMM yyyy")</h2>
-        <button class="btn btn-outline-primary" @onclick="ShowNextMonth" disabled="@IsLoading"
-                aria-label="View next month">
-            Next
+        <button class="btn btn-outline-primary calendar-nav-button" @onclick="ShowNextMonth" disabled="@IsLoading"
+                aria-label="View next month" title="Next month">
+            <span aria-hidden="true">&rarr;</span>
         </button>
     </div>
 </div>
@@ -53,16 +54,16 @@ else
         {
             <div class="calendar-day @(day.Month != CalendarMonth.Month ? "calendar-day-muted" : null)">
                 <div class="calendar-date">@day.Day</div>
-                @foreach (var game in VisibleGames.Where(g => g.GameDate.ToLocalTime().Date == day))
+                @foreach (var game in GetGamesForDay(day))
                 {
                     <a class="calendar-game" style="border-color: @GetTeamColor(game.HomeTeam)" href="@game.GameCenterLink" target="_blank" rel="noopener noreferrer">
                         <div class="calendar-game-summary">
-                            <span class="calendar-game-time">@game.GameDate.ToLocalTime().ToString("h:mm tt")</span>
-                        <div class="calendar-game-teams">
-                            <img src="@GetTeamLogo(game.AwayTeam)" alt="@GetTeamName(game.AwayTeam)" />
-                            <span>at</span>
-                            <img src="@GetTeamLogo(game.HomeTeam)" alt="@GetTeamName(game.HomeTeam)" />
-                        </div>
+                            <span class="calendar-game-time">@GetGameTime(game)</span>
+                            <div class="calendar-game-teams">
+                                <img src="@GetTeamLogo(game.AwayTeam)" alt="@GetTeamName(game.AwayTeam)" />
+                                <span>at</span>
+                                <img src="@GetTeamLogo(game.HomeTeam)" alt="@GetTeamName(game.HomeTeam)" />
+                            </div>
                         </div>
                         @if (game.IsFinal && game.HomeScore.HasValue && game.AwayScore.HasValue)
                         {
@@ -80,6 +81,8 @@ else
     private IReadOnlyList<NhlTeamOptions> ConfiguredTeams = [];
     private DateTime CalendarMonth = new(DateTime.Now.Year, DateTime.Now.Month, 1);
     private IReadOnlyList<NhlGame> Games = [];
+    private Dictionary<int, ClientGameDisplay> LocalGameDisplays = [];
+    private bool ClientTimesInitialized;
     private bool IsLoading = true;
     private string? ErrorMessage;
 
@@ -104,6 +107,8 @@ else
                 ConfiguredTeams.Select(team => team.Abbreviation),
                 from,
                 to);
+            ClientTimesInitialized = false;
+            LocalGameDisplays = [];
         }
         catch (Exception)
         {
@@ -132,8 +137,38 @@ else
         _ = InvokeAsync(StateHasChanged);
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (ClientTimesInitialized || Games.Count == 0)
+        {
+            return;
+        }
+
+        var gameInputs = Games.Select(game => new
+        {
+            id = game.GameId,
+            utc = game.GameDate.ToUniversalTime().ToString("O")
+        });
+
+        LocalGameDisplays = await JS.InvokeAsync<Dictionary<int, ClientGameDisplay>>(
+            "nhlCalendar.getLocalGameInfo",
+            gameInputs);
+        ClientTimesInitialized = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private IEnumerable<NhlGame> VisibleGames =>
         Games.Where(game => TeamSelection.IsSelected(game.HomeTeam));
+
+    private IEnumerable<NhlGame> GetGamesForDay(DateTime day) =>
+        VisibleGames.Where(game =>
+            LocalGameDisplays.TryGetValue(game.GameId, out var display)
+            && display.DateKey == day.ToString("yyyy-MM-dd"));
+
+    private string GetGameTime(NhlGame game) =>
+        LocalGameDisplays.TryGetValue(game.GameId, out var display)
+            ? display.Time
+            : game.GameDate.ToLocalTime().ToString("h:mm tt");
 
     private string GetTeamLogo(string abbreviation) =>
         $"https://assets.nhle.com/logos/nhl/svg/{abbreviation.ToUpperInvariant()}_light.svg";
@@ -155,6 +190,8 @@ else
     {
         TeamSelection.Changed -= OnTeamSelectionChanged;
     }
+
+    private sealed record ClientGameDisplay(string DateKey, string Time);
 
     private IEnumerable<DateTime> CalendarDays
         {

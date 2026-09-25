@@ -63,6 +63,17 @@ h1:focus {
     gap: .75rem;
 }
 
+.calendar-nav-button {
+    align-items: center;
+    display: inline-flex;
+    font-size: 1.25rem;
+    height: 2.25rem;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+    width: 2.25rem;
+}
+
 .calendar-header,
 .calendar-day {
     min-width: 0;
@@ -102,6 +113,7 @@ h1:focus {
     color: #12345b;
     font-size: .96rem;
     text-decoration: none;
+    overflow: hidden;
 }
 
 .calendar-game:hover {
@@ -112,13 +124,13 @@ h1:focus {
     align-items: center;
     display: flex;
     gap: .35rem;
-    white-space: nowrap;
 }
 
 .calendar-game-teams {
     align-items: center;
     display: flex;
     gap: .2rem;
+    min-width: 0;
 }
 
 .calendar-game-teams img {
@@ -131,7 +143,7 @@ h1:focus {
     font-weight: 600;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
     .calendar-controls {
         flex-wrap: wrap;
         justify-content: flex-end;
@@ -145,6 +157,25 @@ h1:focus {
     .calendar-game {
         padding: .25rem;
         font-size: .84rem;
+    }
+
+    .calendar-game-summary {
+        align-items: center;
+        flex-wrap: wrap;
+        gap: .15rem;
+    }
+
+    .calendar-game-time {
+        flex: 0 0 100%;
+    }
+
+    .calendar-game-teams {
+        flex: 0 0 100%;
+    }
+
+    .calendar-game-teams img {
+        height: 1.45rem;
+        width: 1.45rem;
     }
 }
 
