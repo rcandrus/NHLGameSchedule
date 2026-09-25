@@ -1,6 +1,7 @@
 using NHLGameSchedule.Components;
 using NHLGameSchedule.Models;
 using NHLGameSchedule.Services;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,12 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddMemoryCache();
+var dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
+Directory.CreateDirectory(dataProtectionKeysPath);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
+    .SetApplicationName("NHLGameSchedule");
+
 builder.Services.AddScoped<TeamSelectionState>();
 builder.Services.Configure<NhlScheduleOptions>(
     builder.Configuration.GetSection("NhlSchedule"));
@@ -37,18 +44,6 @@ if (builder.Configuration.GetValue<bool>("EnableHttpsRedirection"))
 
 app.UseAntiforgery();
 app.UseWebSockets();
-app.UseStaticFiles();
-
-app.MapGet("/_framework/blazor.web.js", (IWebHostEnvironment environment) =>
-{
-    var webRootPath = environment.WebRootPath
-        ?? Path.Combine(environment.ContentRootPath, "wwwroot");
-    var filePath = Path.Combine(webRootPath, "_framework", "blazor.web.js");
-
-    return File.Exists(filePath)
-        ? Results.File(filePath, "text/javascript")
-        : Results.NotFound();
-});
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

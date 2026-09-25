@@ -30,6 +30,8 @@ ghcr.io/rcand/nhlgameschedule:latest
 
 The image is published automatically by GitHub Actions after a push to `main`. The package may need to be made public in the repository's **Packages** settings before an unauthenticated Portainer host can pull it.
 
+Persist the `/app/keys` directory with a Portainer volume. ASP.NET Core stores its Data Protection keys there so antiforgery tokens and Blazor circuits continue to work across container restarts.
+
 Each workflow run also publishes immutable image tags:
 
 ```text

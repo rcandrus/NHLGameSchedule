@@ -14,11 +14,13 @@ RUN find /app/publish/wwwroot -maxdepth 2 -type f -name 'blazor.web.js' -print
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+RUN mkdir -p /app/keys
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV Urls=http://0.0.0.0:10099
 ENV EnableHttpsRedirection=false
 EXPOSE 10099
+VOLUME ["/app/keys"]
 
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "NHLGameSchedule.dll"]
